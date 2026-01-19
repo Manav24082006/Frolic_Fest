@@ -14,6 +14,8 @@ export default function App() {
       <ScrollTop>
         <RouterProvider router={router} />
       </ScrollTop>
+      <h1>hello</h1>
     </ThemeCustomization>
+    
   );
 }
