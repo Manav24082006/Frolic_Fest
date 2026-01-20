@@ -361,6 +361,9 @@
 
 
 
+
+
+
 import React, { useEffect, useState } from 'react';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
@@ -391,26 +394,75 @@ import { useNavigate } from 'react-router';
 
 function Institutes() {
   // pagination
-  const [page, setPage] = useState(2);
+  const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-
+  
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
-
+  
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
-
+  
   // data fetching
   // const [data,setData]=useState([]);
   // useEffect(()=>{
-  //   getAllInstitutes(setData);
-  // },[]);
+    //   getAllInstitutes(setData);
+    // },[]);
+    
+    
+    const [data, setData] = useState([]);
+    // loading state
+    const [loading, setLoading] = useState(true);
+    
+    // card live
+    const [stats, setStats] = useState({
+      institutePartners: 0,
+      totalParticipants: 0,
+      eventRevenue: 0
+    });
+    
 
-  const [data, setData] = useState([]);
-  useEffect(() => {
+    // revenue converter
+    const parseRevenueToNumber = (value) => {
+      if (!value) return 0;
+  
+      const str = value.toString().toLowerCase().replace(/\s/g, '');
+  
+      if (str.includes('cr')) return parseFloat(str) * 10000000; // 1 Cr = 1 Crore = 10,000,000
+      if (str.includes('lakh')) return parseFloat(str) * 100000; // 1 Lakh = 100,000
+      if (str.includes('k')) return parseFloat(str) * 1000; // 1k = 1000
+  
+      return Number(str) || 0; // fallback
+    };
+  
+    //  participants strings to numbers
+    const parseParticipants = (value) => {
+      if (!value) return 0;
+  
+      const str = value.toString().toLowerCase().replace(/\s/g, '');
+  
+      if (str.includes('k')) return parseFloat(str) * 1000; // 1.2k -> 1200
+  
+      return Number(str.replace('+', '')) || 0;
+    };
+  
+    // Formatter
+    const formatRevenue = (amount) =>
+      amount >= 1e7
+        ? `₹${Math.round(amount / 1e7)}Cr`
+        : amount >= 1e5
+          ? `₹${Math.round(amount / 1e5)}L`
+          : amount >= 1e3
+            ? `₹${Math.round(amount / 1e3)}K`
+            : `₹${amount}`;
+
+
+
+
+    useEffect(() => {
 
     // card view and table data
     const fetchInstitutes = async () => {
@@ -424,9 +476,9 @@ function Institutes() {
         const totalParticipants = apiData.reduce((sum, item) => sum + parseParticipants(item.Participants), 0);
 
         const eventRevenue = apiData.reduce((sum, item) => sum + parseRevenueToNumber(item.Revenue), 0);
-
+// new Set(apiData.map((i) => i.id)).size,
         setStats({
-          institutePartners: new Set(apiData.map((i) => i.id)).size,
+          institutePartners: apiData.length,
           totalParticipants,
           eventRevenue
         });
@@ -448,52 +500,19 @@ function Institutes() {
     return () => clearInterval(interval);
   }, []);
 
+
+
+  // client side pagination
+  const paginatedData = data.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+
   // navigation
   const navigate = useNavigate();
 
-  // card live
-  const [stats, setStats] = useState({
-    institutePartners: 0,
-    totalParticipants: 0,
-    eventRevenue: 0
-  });
 
-  // revenue converter
-  const parseRevenueToNumber = (value) => {
-    if (!value) return 0;
 
-    const str = value.toString().toLowerCase().replace(/\s/g, '');
-
-    if (str.includes('cr')) return parseFloat(str) * 10000000; // 1 Cr = 1 Crore = 10,000,000
-    if (str.includes('lakh')) return parseFloat(str) * 100000; // 1 Lakh = 100,000
-    if (str.includes('k')) return parseFloat(str) * 1000; // 1k = 1000
-
-    return Number(str) || 0; // fallback
-  };
-
-  //  participants strings to numbers
-  const parseParticipants = (value) => {
-    if (!value) return 0;
-
-    const str = value.toString().toLowerCase().replace(/\s/g, '');
-
-    if (str.includes('k')) return parseFloat(str) * 1000; // 1.2k -> 1200
-
-    return Number(str.replace('+', '')) || 0;
-  };
-
-  // Formatter
-  const formatRevenue = (amount) =>
-    amount >= 1e7
-      ? `₹${Math.round(amount / 1e7)}Cr`
-      : amount >= 1e5
-        ? `₹${Math.round(amount / 1e5)}L`
-        : amount >= 1e3
-          ? `₹${Math.round(amount / 1e3)}K`
-          : `₹${amount}`;
-
-  // loading state
-  const [loading, setLoading] = useState(true);
 
   if (loading) {
     return (
@@ -775,7 +794,7 @@ function Institutes() {
               </TableHead>
 
               <TableBody>
-                {data.map((row, index) => (
+                {paginatedData.map((row, index) => (
                   <TableRow
                     key={row.id}
                     sx={{
@@ -844,11 +863,12 @@ function Institutes() {
 
         <TablePagination
           component="div"
-          count={100}
+          count={data.length}
           page={page}
           onPageChange={handleChangePage}
           rowsPerPage={rowsPerPage}
           onRowsPerPageChange={handleChangeRowsPerPage}
+          rowsPerPageOptions={[5,10,25,50]}
           sx={{ fontSize: '20px', marginTop: '10px' }}
         />
       </Box>
