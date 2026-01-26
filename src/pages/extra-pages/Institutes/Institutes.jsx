@@ -363,14 +363,18 @@
 
 
 
-
 import React, { useEffect, useState } from 'react';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
-import { CircularProgress, FormControl, InputLabel } from '@mui/material';
+import { CircularProgress, FormControl, InputLabel, TextField } from '@mui/material';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import TablePagination from '@mui/material/TablePagination';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+
 import {
   Box,
   Typography,
@@ -389,104 +393,59 @@ import {
   SvgIcon
 } from '@mui/material';
 
-import { getAllInstitutes } from '../../../api/institutes/Institutes';
+import { deleteById, getAllInstitutes, getInstituteById } from '../../../api/institutes/Institutes';
 import { useNavigate } from 'react-router';
 
 function Institutes() {
-  // pagination
+  const navigate = useNavigate();
+
+  //         STATE     //
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  //      pagination   //
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-  
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-  
-  // data fetching
-  // const [data,setData]=useState([]);
-  // useEffect(()=>{
-    //   getAllInstitutes(setData);
-    // },[]);
-    
-    
-    const [data, setData] = useState([]);
-    // loading state
-    const [loading, setLoading] = useState(true);
-    
-    // card live
-    const [stats, setStats] = useState({
-      institutePartners: 0,
-      totalParticipants: 0,
-      eventRevenue: 0
-    });
-    
 
-    // revenue converter
-    const parseRevenueToNumber = (value) => {
-      if (!value) return 0;
-  
-      const str = value.toString().toLowerCase().replace(/\s/g, '');
-  
-      if (str.includes('cr')) return parseFloat(str) * 10000000; // 1 Cr = 1 Crore = 10,000,000
-      if (str.includes('lakh')) return parseFloat(str) * 100000; // 1 Lakh = 100,000
-      if (str.includes('k')) return parseFloat(str) * 1000; // 1k = 1000
-  
-      return Number(str) || 0; // fallback
-    };
-  
-    //  participants strings to numbers
-    const parseParticipants = (value) => {
-      if (!value) return 0;
-  
-      const str = value.toString().toLowerCase().replace(/\s/g, '');
-  
-      if (str.includes('k')) return parseFloat(str) * 1000; // 1.2k -> 1200
-  
-      return Number(str.replace('+', '')) || 0;
-    };
-  
-    // Formatter
-    const formatRevenue = (amount) =>
-      amount >= 1e7
-        ? `₹${Math.round(amount / 1e7)}Cr`
-        : amount >= 1e5
-          ? `₹${Math.round(amount / 1e5)}L`
-          : amount >= 1e3
-            ? `₹${Math.round(amount / 1e3)}K`
-            : `₹${amount}`;
+  const [editId, setEditId] = useState(null);
+  const [openEdit, setOpenEdit] = useState(false);
+
+  const [formData, setFormData] = useState({
+    institute: '',
+    eventType: '',
+    frolicRole: '',
+    participants: '',
+    revenue: '',
+    timeline: ''
+  });
+
+  //      calculation of stats      //
+  const calculateStats = (apiData) => {
+  const totalParticipants = apiData.reduce((sum, item) => sum + parseParticipants(item.Participants), 0);
+
+  const eventRevenue = apiData.reduce((sum, item) => sum + parseRevenueToNumber(item.Revenue), 0);
+
+  setStats({
+    institutePartners: apiData.length,
+    totalParticipants,
+    eventRevenue
+  });
+  }
 
 
+  //     Fetch DATA     //
 
-
-    useEffect(() => {
-
+  useEffect(() => {
     // card view and table data
     const fetchInstitutes = async () => {
-
       //loading state
       setLoading(true); // it will start to show loading
 
-      getAllInstitutes((apiData) => {
-        setData(apiData);
-
-        const totalParticipants = apiData.reduce((sum, item) => sum + parseParticipants(item.Participants), 0);
-
-        const eventRevenue = apiData.reduce((sum, item) => sum + parseRevenueToNumber(item.Revenue), 0);
-// new Set(apiData.map((i) => i.id)).size,
-        setStats({
-          institutePartners: apiData.length,
-          totalParticipants,
-          eventRevenue
-        });
-
-        // loading state
+      const apiData = await getAllInstitutes();
+      setData(apiData)
+      calculateStats(apiData);
+      // loading state
         setLoading(false); // it will stop loading after data will come
-
-      });
 
     };
 
@@ -494,25 +453,131 @@ function Institutes() {
     fetchInstitutes();
 
     // auto 30 seconds refresh
-    const interval = setInterval(fetchInstitutes, 30000);
+    const interval = setInterval(fetchInstitutes, 300000);
 
     // clean up
     return () => clearInterval(interval);
   }, []);
 
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
 
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  //        All Handlers      //
+
+  // handle edit
+  const handleEdit = (row) => {
+    setEditId(row.id);
+    setFormData({
+      institute: row.Institutes,
+      eventType: row.Event_Type,
+      frolicRole: row.Frolic_role,
+      participants: row.Participants,
+      revenue: row.Revenue,
+      timeline: row.Time_Line
+    });
+    setOpenEdit(true);
+  };
+
+  // input handler
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+  
+  // update (using CRUD)
+
+  const handleUpdate = async () => {
+    const update = await getInstituteById(editId , {
+      institute : formData.institute,
+      eventType : formData.eventType,
+      frolicRole : formData.frolicRole,
+      participants : formData.participants,
+      revenue : formData.revenue,
+      timeline : formData.timeline,
+    })
+
+          //  update state   //
+
+    const newData =  data.map((row) => row.id === editId ? {
+      ... row,
+      Institutes : update.institute,
+      Event_Type : update.eventType,
+      Frolic_role : update.frolicRole,
+      Participants : update.participants,
+      Revenue : update.revenue,
+      Time_Line : update.timeline 
+    } :row )
+
+    setData(newData)
+    calculateStats(newData)
+
+    setOpenEdit(false);
+    setEditId(null);
+  };
+
+  // delete (CRUD)
+  const handleDelete = async (id) => {
+    await deleteById(id);
+    const newData = data.filter((row) => row.id !== id);
+    setData(newData);
+    calculateStats(newData);
+
+  };
+
+
+  // card live
+  const [stats, setStats] = useState({
+    institutePartners: 0,
+    totalParticipants: 0,
+    eventRevenue: 0
+  });
+
+  // revenue converter
+  const parseRevenueToNumber = (value) => {
+    if (!value) return 0;
+
+    const str = value.toString().toLowerCase().replace(/\s/g, '');
+
+    if (str.includes('cr')) return parseFloat(str) * 10000000; // 1 Cr = 1 Crore = 10,000,000
+    if (str.includes('lakh')) return parseFloat(str) * 100000; // 1 Lakh = 100,000
+    if (str.includes('k')) return parseFloat(str) * 1000; // 1k = 1000
+
+    return Number(str) || 0; // fallback
+  };
+
+  //  participants strings to numbers
+  const parseParticipants = (value) => {
+    if (!value) return 0;
+
+    const str = value.toString().toLowerCase().replace(/\s/g, '');
+
+    if (str.includes('k')) return parseFloat(str) * 1000; // 1.2k -> 1200
+
+    return Number(str.replace('+', '')) || 0;
+  };
+
+  // Formatter
+  const formatRevenue = (amount) =>
+    amount >= 1e7
+      ? `₹${Math.round(amount / 1e7)}Cr`
+      : amount >= 1e5
+        ? `₹${Math.round(amount / 1e5)}L`
+        : amount >= 1e3
+          ? `₹${Math.round(amount / 1e3)}K`
+          : `₹${amount}`;
 
   // client side pagination
-  const paginatedData = data.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
-  );
+  const paginatedData = data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   // navigation
-  const navigate = useNavigate();
-
-
-
 
   if (loading) {
     return (
@@ -530,9 +595,7 @@ function Institutes() {
     );
   }
 
-
-
-  return (    
+  return (
     <Box
       sx={{
         background: 'linear-gradient(to bottom right, #ecfdf5, #ffffff, #ecfeff)',
@@ -843,11 +906,11 @@ function Institutes() {
                           <VisibilityOutlinedIcon />
                         </IconButton>
 
-                        <IconButton sx={{ color: '#2563eb' }} title="Edit">
+                        <IconButton onClick={() => handleEdit(row)} sx={{ color: '#2563eb' }} title="Edit">
                           <EditOutlinedIcon />
                         </IconButton>
 
-                        <IconButton sx={{ color: '#dc2626' }} title="Delete">
+                        <IconButton onClick={() => handleDelete(row.id)} sx={{ color: '#dc2626' }} title="Delete">
                           <DeleteOutlineOutlinedIcon />
                         </IconButton>
                       </Box>
@@ -868,9 +931,61 @@ function Institutes() {
           onPageChange={handleChangePage}
           rowsPerPage={rowsPerPage}
           onRowsPerPageChange={handleChangeRowsPerPage}
-          rowsPerPageOptions={[5,10,25,50]}
+          rowsPerPageOptions={[5, 10, 25, 50]}
           sx={{ fontSize: '20px', marginTop: '10px' }}
         />
+
+                {/* edit form */}
+                        <Dialog
+                          open={openEdit}
+                          onClose={() => setOpenEdit(false)}
+                          fullWidth
+                          maxWidth="sm"
+                          sx={{
+                            '& .MuiBackdrop-root': {
+                              backgroundColor: 'rgba(250,250,250,0.2)',
+                              backdropFilter: 'blur(6px)'
+                            },
+                            '& .MuiDialog-paper': {
+                              borderRadius: 12,
+                              background: 'rgba(250,250,250,0.7)',
+                              backdropFilter: 'blur(10px)'
+                            }
+                          }}
+                        >
+                          <DialogTitle>Edit Institute</DialogTitle>
+
+                          <DialogContent dividers>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                              <TextField label="Institute" name="institute" value={formData.institute} onChange={handleChange} fullWidth />
+                              <TextField label="Event Type" name="eventType" value={formData.eventType} onChange={handleChange} fullWidth />
+                              <TextField
+                                label="Frolic Role"
+                                name="frolicRole"
+                                value={formData.frolicRole}
+                                onChange={handleChange}
+                                fullWidth
+                              />
+                              <TextField
+                                label="Participants"
+                                name="participants"
+                                value={formData.participants}
+                                onChange={handleChange}
+                                fullWidth
+                              />
+                              <TextField label="Revenue" name="revenue" value={formData.revenue} onChange={handleChange} fullWidth />
+                              <TextField label="Timeline" name="timeline" value={formData.timeline} onChange={handleChange} fullWidth />
+                            </Box>
+                          </DialogContent>
+
+                          <DialogActions>
+                            <Button onClick={() => setOpenEdit(false)}>Cancel</Button>
+                            <Button onClick={handleUpdate} variant="contained">
+                              Update
+                            </Button>
+                          </DialogActions>
+                        </Dialog>
+
       </Box>
     </Box>
   );

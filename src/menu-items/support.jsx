@@ -42,8 +42,8 @@ const support = {
       type: 'item',
       url: '/Institutes',
       icon: icons.AccountBalanceSharpIcon,
-      external: true,
-      target: true
+      // external: true,
+      // target: true
     },
     {
       id: 'Departments',
@@ -51,8 +51,8 @@ const support = {
       type: 'item',
       url: '/Departments',
       icon: icons.BusinessOutlinedIcon,
-      external: true,
-      target: true
+      // external: true,
+      // target: true
     },
     {
       id: 'Events',
@@ -60,8 +60,8 @@ const support = {
       type: 'item',
       url: '/Events',
       icon: icons.EmojiEventsOutlinedIcon,
-      external: true,
-      target: true
+      // external: true,
+      // target: true
     }
   ]
 };
