@@ -200,6 +200,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import { useNavigate } from 'react-router';
+
 import { deleteDepartment, getAllDepartments, getDepartmentById } from '../../../api/departments/Departments';
 
 function Department() {
@@ -332,15 +333,16 @@ function Department() {
 
       {/* Cards Grid */}
       <Box sx={{ px: { xs: 2, sm: 3, lg: 4 }, py: 4 }}>
-        <Grid container spacing={{ xs: 2, sm: 3 }} columns={{ xs: 1, md: 2, lg: 2, xl: 3 }} gap={3}>
+        <Grid container spacing={3}>
           {data.map((dept) => (
-            <Grid item xs={1} key={dept.id}>
+            <Grid item key={dept.id} xs={12} sm={6} md={4}>
               <Paper
                 elevation={0}
                 sx={{
                   border: '1px solid #e5e7eb',
                   borderRadius: 2,
                   p: { xs: 2, sm: 3 },
+                  height: '100%',
                   transition: 'box-shadow 0.2s',
                   '&:hover': {
                     boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'

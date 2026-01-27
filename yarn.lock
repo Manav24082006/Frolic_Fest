@@ -1055,7 +1055,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mui/system@npm:7.3.6, @mui/system@npm:^7.3.6":
+"@mui/system@npm:^7.3.6":
   version: 7.3.6
   resolution: "@mui/system@npm:7.3.6"
   dependencies:
@@ -3824,7 +3824,7 @@ __metadata:
     "@mui/icons-material": "npm:^7.3.7"
     "@mui/lab": "npm:7.0.1-beta.20"
     "@mui/material": "npm:^7.3.7"
-    "@mui/system": "npm:7.3.6"
+    "@mui/system": "npm:^7.3.7"
     "@mui/x-charts": "npm:8.22.1"
     "@vitejs/plugin-react": "npm:5.1.2"
     eslint: "npm:9.39.2"
